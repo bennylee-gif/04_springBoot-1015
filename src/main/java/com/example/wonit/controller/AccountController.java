@@ -212,4 +212,11 @@ public class AccountController {
                                      @RequestBody AccountCreateRequest request) { // Body
         return AccountResponse.from(accountService.updateOne(accountNo, request));
     }
+
+    //   DELETE /api/accounts/{accountNo}         해지      204
+    @DeleteMapping("/{accountNo}")
+    public AccountResponse deleteOne(@PathVariable("accountNo") String accountNo) { // Body
+        return accountService.deleteOne(accountNo);
+    }
+
 }

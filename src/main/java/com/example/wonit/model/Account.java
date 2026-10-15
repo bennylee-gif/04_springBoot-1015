@@ -6,13 +6,14 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import lombok.*;
 
-@Data // @Getter, @Setter, @ToString, @EqualsAndHashCode, @RequriedArgsConstructor
+
 // 보안이 중요한 데이터 처리에는 setter를 직접 만들어서 사용합니다.
 //@Getter
 //@ToString
 //@EqualsAndHashCode
 //@RequiredArgsConstructor
-//@Entity
+@Data // @Getter, @Setter, @ToString, @EqualsAndHashCode, @RequriedArgsConstructor
+@Entity
 public class Account {
 
     @Id // Primary Key(고유값을 의미하는 컬럼)을 지정해줘야 이 컬럼을 기반으로 쿼리들이 만들어집니다.
@@ -37,5 +38,7 @@ public class Account {
         account.balance = 0;
         return account;
     }
+
+
 
 }

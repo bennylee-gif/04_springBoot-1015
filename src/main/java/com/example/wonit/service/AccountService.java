@@ -10,6 +10,7 @@
 package com.example.wonit.service;
 
 import com.example.wonit.dto.AccountCreateRequest;
+import com.example.wonit.dto.AccountResponse;
 import com.example.wonit.exception.*;
 import com.example.wonit.model.Account;
 import com.example.wonit.repository.AccountRepository;
@@ -149,5 +150,12 @@ public class AccountService {
         Account saved = accountRepository.save(account);
         // 반영된 상태 확인하기
         return saved;
+    }
+
+    // Service
+    public AccountResponse deleteOne(String accountNo) {
+        // JPA의 규칙대로 메서드를 만들어서 repo에 넘기면 됩니다.
+        // PK 라면 JPA에 메서드를 만들어놓지 않아도 동작
+        return accountRepository.deleteByAccountNo(accountNo);
     }
 }
