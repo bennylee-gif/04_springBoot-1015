@@ -11,11 +11,11 @@ spring:
     username: sa
     password:
 
-#  # MySQL Database
-#      url: jdbc:mysql://${host}:3306/${database}?useSSL=false&serverTimezone=Asia/Seoul
-#      username: ${username}
-#      password: ${password}
-#      driver-class-name: com.mysql.cj.jdbc.Driver
+  #  # MySQL Database
+  #      url: jdbc:mysql://${host}:3306/${database}?useSSL=false&serverTimezone=Asia/Seoul
+  #      username: ${username}
+  #      password: ${password}
+  #      driver-class-name: com.mysql.cj.jdbc.Driver
   jpa:
     hibernate:
       # ddl-auto 옵션: create, create-drop, update, validate, none
@@ -53,3 +53,6 @@ logging:
 
   file:
     name: logs/wonit.log
+
+server:
+  port: 8081

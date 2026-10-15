@@ -3,16 +3,31 @@ package com.example.wonit.controller;
 import com.example.wonit.dto.AccountCreateRequest;
 import com.example.wonit.dto.AccountResponse;
 import com.example.wonit.exception.AccountNotFoundException;
+import com.example.wonit.exception.InvalidAccountRequestException;
 import com.example.wonit.model.Account;
 import com.example.wonit.service.AccountService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
 
+import java.net.URI;
 import java.util.List;
 
+// RestController = 인터넷 주소(URL)를 받아 Service 를 부르는 부분. 돌려주는 자바 객체는 Spring 이 JSON 으로 바꿔 응답한다
+// REST 규칙: URL 은 명사(무엇을), HTTP 메서드는 동사(어떻게)
+//   GET    /api/accounts                     목록      200  v
+//   GET    /api/accounts/{accountNo}         하나      200  v
+//   POST   /api/accounts                     개설      201 + Location 헤더로 개설된 주소 전송 v
+//   PUT    /api/accounts/{accountNo}         통째로 교체 200
+//   PATCH  /api/accounts/{accountNo}/status  상태 변경 200
+//   DELETE /api/accounts/{accountNo}         해지      204
+//   POST   /api/accounts/{accountNo}/withdrawals    출금      201
+//   POST   /api/accounts/{accountNo}/deposits       입금      201
+//   GET    /api/accounts/{accountNo}/transactions   거래내역  200 (쪽 단위로 출력)
 @Slf4j
 @Tag(name = "swagger 테스트 API", description = "swagger 테스트를 진행하는 API")
 @RestController
@@ -30,32 +45,32 @@ public class AccountController {
     @Operation(summary = "정보 모두 조회", description = "Account의 전체 정보를 조회합니다.")
     @GetMapping
     public List<AccountResponse> findAll() {
-    //public List<Account> findAll() {
+        //public List<Account> findAll() {
         // stream().filter() : 값이 true인 것만 반환
         // stream().map() : 모든 값에 같은 메서드를 일괄 적용
         log.info("전체 계좌 조회 시작");
         return accountService.findAll().stream().map(AccountResponse::from).toList();
     }
 
-//    // @RequestBody : 숨기고 싶은 정보, 주소줄에 전달하기에 너무 긴 값들을 Body에 싣고 전달하는 방법
-//    // ResponseEntity : 응답코드를 구체적으로 넘겨주기 위한 스프링부트의 Wrapper 클래서
-//    @PostMapping
-//    public ResponseEntity<AccountResponse> createAccount(
-//            @RequestBody AccountCreateRequest request
-//    ) {
-//        Account account = accountService.createAccount(request);
-//
-//        // 새로 발급받은 {accountNo}로 주소를 돌려서 호출하는 부분
-//        URI location = ServletUriComponentsBuilder
-//                .fromCurrentContextPath()
-//                .path("/api/accounts/{accountNo}")
-//                .buildAndExpand(account.getAccountNo())
-//                .toUri();
-//
-//        return ResponseEntity
-//                .created(location)
-//                .body(AccountResponse.from(account));
-//    }
+    // @RequestBody : 숨기고 싶은 정보, 주소줄에 전달하기에 너무 긴 값들을 Body에 싣고 전달하는 방법
+    // ResponseEntity : 응답코드를 구체적으로 넘겨주기 위한 스프링부트의 Wrapper 클래스
+    @PostMapping
+    public ResponseEntity<AccountResponse> createAccount(
+            @RequestBody AccountCreateRequest request
+    ) {
+        Account account = accountService.createAccount(request);
+
+        // 새로 발급받은 {accountNo}로 주소를 돌려서 호출하는 부분
+        URI location = ServletUriComponentsBuilder
+                .fromCurrentContextPath()
+                .path("/api/accounts/{accountNo}")
+                .buildAndExpand(account.getAccountNo())
+                .toUri();
+
+        return ResponseEntity
+                .created(location) // Header에 새로 생긴 계좌번호를 달아서 주소를 전달
+                .body(AccountResponse.from(account)); // Body에 실제 생성된 계좌정보 전달
+    }
 
     // @RequestBody : 숨기고 싶은 정보, 주소줄에 전달하기에 너무 긴 값들을 Body에 싣고 전달하는 방법
     /**
@@ -76,17 +91,18 @@ public class AccountController {
      * @param request 개설할 고객 ID와 계좌 종류
      * @return 생성된 계좌 정보
      */
-    @PostMapping
-    public AccountResponse createAccount(@RequestBody AccountCreateRequest request) {
-        log.debug("계좌 개설 요청: customerId={}, accountType={}",
-                request.customerId(), request.accountType());
-
-        Account account = accountService.createAccount(request);
-
-        log.debug("계좌 개설 응답: accountId={}, accountType={}",
-                account.getAccountId(), account.getAccountType());
-        return AccountResponse.from(account);
-    }
+//    @Operation(summary = "사용자 정보 입력 후 계좌 개설", description = "개설할 고객 ID와 계좌 종류를 입력받아서 DB에 저장합니다.")
+//    @PostMapping
+//    public AccountResponse createAccount(@RequestBody AccountCreateRequest request) {
+//        log.debug("계좌 개설 요청: customerId={}, accountType={}",
+//                request.customerId(), request.accountType());
+//
+//        Account account = accountService.createAccount(request);
+//
+//        log.debug("계좌 개설 응답: accountId={}, accountType={}",
+//                account.getAccountId(), account.getAccountType());
+//        return AccountResponse.from(account);
+//    }
 
     // 특정 계좌번호의 세부 정보를 조회  localhost:8080/api/accounts/1002-345-678901
     /**
@@ -95,20 +111,42 @@ public class AccountController {
      * @return 찾은 계좌
      * @throws AccountNotFoundException 그런 계좌가 없을 때
      */
+//    @GetMapping("/{accountNo}")
+//    public AccountResponse findOne(@PathVariable("accountNo") String accountNo){
+//    // public Account findOne(@PathVariable("accountNo") String accountNo){
+//         log.trace("trace level의 로그 - 자잘함");
+//         log.debug("debug level의 로그 - 개발자가 flow 따라갈 수 있는 수준의 로그");
+//         log.info("info level의 로그 - 사용자나 시스템의 의미있는 내용을 담은 로그, 실제 운영환경에는 info 이상만 수집");
+//         log.warn("warn level의 로그 - 현재는 문제 없지만 앞으로 문제가 될 수 있는 상황에 대한 경고");
+//         log.error("error level의 로그 - 치명적인 로그");
+//        // log.info("계좌 조회=" + accountNo); // 먼저 문자열을 더하는 과정은 거치고 나서 로그를 제외
+//        log.info("계좌 조회 시작={}", accountNo); // 아예 보지도 않고 실행
+//        return AccountResponse.from(accountService.getAccount(accountNo));
+//    }
     @GetMapping("/{accountNo}")
-    public AccountResponse findOne(@PathVariable("accountNo") String accountNo){
-    // public Account findOne(@PathVariable("accountNo") String accountNo){
-        // log.trace("trace level의 로그 - 자잘함");
-        // log.debug("debug level의 로그 - 개발자가 flow 따라갈 수 있는 수준의 로그");
-        log.info("info level의 로그 - 사용자나 시스템의 의미있는 내용을 담은 로그, 실제 운영환경에는 info 이상만 수집");
-        // log.warn("warn level의 로그 - 현재는 문제 없지만 앞으로 문제가 될 수 있는 상황에 대한 경고");
-        // log.error("error level의 로그 - 치명적인 로그");
-        // log.info("계좌 조회=" + accountNo); // 먼저 문자열을 더하는 과정은 거치고 나서 로그를 제외
-        log.info("계좌 조회 시작={}", accountNo); // 아예 보지도 않고 실행
+    public AccountResponse findOne(@PathVariable("accountNo") String accountNo) {
+        boolean validAccountNo = accountNo.matches(
+                "(?i)(\\d{4}-\\d{3}-\\d{6}|[0-9a-f]{20})"
+        );
+
+        if (!validAccountNo) {
+            throw new InvalidAccountRequestException(
+                    "계좌번호 형식이 올바르지 않습니다."
+            );
+        }
+
+        log.info("계좌 조회 시작={}", accountNo);
         return AccountResponse.from(accountService.getAccount(accountNo));
     }
 
     // 계좌 전체를 조회해서 그중에 '정상' 계좌만 계좌번호만 출력
+
+    /**
+     * Account 테이블에 있는 계좌 status를 조회하는 메서드입니다.
+     *
+     * @param "없음"
+     * @return "status '정상'인 계좌의 계좌번호"
+     */
     @GetMapping("/report1")
     public List<String> normalAccountNos() {
         return accountService.normalAccountNos();
@@ -166,5 +204,12 @@ public class AccountController {
     @GetMapping("/account-type/{accountType}") // localhost:8080/api/accounts/account-type/입출금 -> 같은 방식으로 값을 입력받는 함수가 2개 있음
     public List<AccountResponse> findAllAccountsByAccountType(@PathVariable String accountType){
         return accountService.findAllAccountsByAccountType(accountType).stream().map(AccountResponse::from).toList();
+    }
+
+    //   PUT    /api/accounts/{accountNo}         통째로 교체 200
+    @PutMapping("/{accountNo}")
+    public AccountResponse updateOne(@PathVariable("accountNo") String accountNo, // 주소줄
+                                     @RequestBody AccountCreateRequest request) { // Body
+        return AccountResponse.from(accountService.updateOne(accountNo, request));
     }
 }
